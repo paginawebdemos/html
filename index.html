@@ -3927,55 +3927,18 @@ document.getElementById('nav-config').addEventListener('click', () => {
     
    
    
-    async function imprimirTicket(tipo) {
+ async function imprimirTicket(tipo) {
     const carrito = tipo === 'venta' ? carritoVenta : carritoFiar;
     const cliente = tipo === 'venta' ? 
-        document.getElementById('nombreClienteVenta').value || 'Cliente Anónimo' : 
+        document.getElementById('nombreClienteVenta').value || 'CLIENTE ANÓNIMO' : 
         document.getElementById('nombreClienteFiar').value;
     const totalBs = carrito.reduce((a, b) => a + b.total, 0);
     const totalUsd = (totalBs / tasaDolar).toFixed(2);
-    const businessName = document.getElementById('businessName').textContent;
+    const businessName = document.getElementById('businessName').textContent.toUpperCase();
     const fecha = new Date().toLocaleString();
     
-    // Crear contenido del ticket con formato simple para impresoras térmicas
-    let ticketContent = `
-        ${businessName}\n
-        ${tipo === 'venta' ? 'TICKET DE VENTA' : 'TICKET DE FIADO'}\n
-        Fecha: ${fecha}\n
-        Cliente: ${cliente}\n
-        ${'-'.repeat(32)}\n
-    `;
-
-    // Agregar productos (formato alineado)
-    carrito.forEach(p => {
-        // Limitar el nombre del producto a 20 caracteres
-        const nombre = p.nombre.length > 20 ? p.nombre.substring(0, 17) + '...' : p.nombre;
-        const cantidad = p.cantidad.toString().padStart(3, ' ');
-        const precio = p.precioVentaBs.toFixed(2).padStart(8, ' ');
-        const total = p.total.toFixed(2).padStart(8, ' ');
-        
-        ticketContent += `${nombre}\n${cantidad} x ${precio} = ${total}\n`;
-    });
-
-    // Agregar totales
-    ticketContent += `
-        ${'-'.repeat(32)}\n
-        Subtotal: ${totalBs.toFixed(2).padStart(10, ' ')} Bs\n
-        Tasa USD: ${tasaDolar.toFixed(2).padStart(10, ' ')} Bs/USD\n
-        TOTAL:    ${totalBs.toFixed(2).padStart(10, ' ')} Bs\n
-        (${totalUsd} USD)\n
-        ${'-'.repeat(32)}\n
-        ¡Gracias por su preferencia!\n
-        ${businessName}\n
-    `;
-
-    // Añadir advertencia si es fiado
-    if (tipo === 'fiar') {
-        ticketContent += '\n** FIADO - PENDIENTE DE PAGO **\n';
-    }
-
-    // Crear ventana de impresión con contenido simple
     const printWindow = window.open('', '_blank');
+    
     printWindow.document.write(`
         <!DOCTYPE html>
         <html>
@@ -3983,33 +3946,127 @@ document.getElementById('nav-config').addEventListener('click', () => {
             <title>Ticket de ${tipo === 'venta' ? 'Venta' : 'Fiado'}</title>
             <style>
                 body {
-                    font-family: monospace;
-                    font-size: 8px;
-                    white-space: pre;
+                    font-family: 'Courier New', monospace;
+                    width: 58mm;
                     margin: 0;
-                    padding: 10px;
-                    width: 80mm;
+                    padding: 2mm;
+                    font-size: 10px;
+                    line-height: 1.2;
+                }
+                .header {
+                    text-align: center;
+                    font-weight: bold;
+                    margin-bottom: 2mm;
+                }
+                .business-name {
+                    font-size: 12px;
+                }
+                .ticket-type {
+                    font-size: 10px;
+                }
+                .info {
+                    margin-bottom: 2mm;
+                }
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-bottom: 2mm;
+                }
+                th {
+                    text-align: left;
+                    border-bottom: 1px dashed #000;
+                    padding: 1mm 0;
+                }
+                td {
+                    padding: 1mm 0;
+                    vertical-align: top;
+                }
+                .right {
+                    text-align: right;
+                }
+                .totals {
+                    margin-top: 2mm;
+                    border-top: 1px dashed #000;
+                    padding-top: 2mm;
+                }
+                .total-row {
+                    display: flex;
+                    justify-content: space-between;
+                }
+                .footer {
+                    text-align: center;
+                    margin-top: 2mm;
+                    font-size: 9px;
                 }
                 @media print {
                     @page {
-                        size: 80mm auto;
+                        size: 58mm auto;
                         margin: 0;
                     }
                     body {
-                        width: 80mm;
+                        width: 58mm;
                         margin: 0;
-                        padding: 5px;
+                        padding: 2mm;
                     }
                 }
             </style>
         </head>
-        <body onload="window.print(); setTimeout(() => window.close(), 500);">
-            ${ticketContent}
+        <body onload="window.print(); window.close();">
+            <div class="header">
+                <div class="business-name">${businessName}</div>
+                <div class="ticket-type">TICKET DE ${tipo === 'venta' ? 'VENTA' : 'FIADO'}</div>
+            </div>
+            
+            <div class="info">
+                <div>Fecha: ${fecha}</div>
+                <div>Cliente: ${cliente.toUpperCase()}</div>
+            </div>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th class="right">Cant.</th>
+                        <th class="right">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${carrito.map(p => `
+                        <tr>
+                            <td>${p.nombre.toUpperCase()}</td>
+                            <td class="right">${p.cantidad}</td>
+                            <td class="right">${p.total.toFixed(2)}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+            
+            <div class="totals">
+                <div class="total-row">
+                    <span>Subtotal:</span>
+                    <span>${totalBs.toFixed(2)}</span>
+                </div>
+                <div class="total-row">
+                    <span>Tasa USD:</span>
+                    <span>${tasaDolar.toFixed(2)} Bs/USD</span>
+                </div>
+                <div class="total-row" style="font-weight: bold;">
+                    <span>TOTAL:</span>
+                    <span>${totalBs.toFixed(2)} Bs (${totalUsd} USD)</span>
+                </div>
+            </div>
+            
+            <div class="footer">
+                <div>¡Gracias por su compra!</div>
+                <div>${businessName}</div>
+                ${tipo === 'fiar' ? '<div style="font-weight: bold;">** FIADO - PENDIENTE DE PAGO **</div>' : ''}
+            </div>
         </body>
         </html>
     `);
+    
     printWindow.document.close();
-
+    
     // Si es una venta, actualizar inventario y limpiar
     if (tipo === 'venta' && carritoVenta.length > 0) {
         try {
@@ -4038,7 +4095,7 @@ document.getElementById('nav-config').addEventListener('click', () => {
             
             notificar('Venta completada e inventario actualizado', 'success');
             
-            // Actualizar dashboard
+            // Actualizar dashboard y misiones
             actualizarDashboard();
         
         } catch (error) {
@@ -4046,7 +4103,6 @@ document.getElementById('nav-config').addEventListener('click', () => {
             notificar('Error al actualizar inventario', 'error');
         }
     }
-
     
     // Opción alternativa para impresión directa
     setTimeout(() => {
